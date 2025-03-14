@@ -8,6 +8,17 @@ document.addEventListener('DOMContentLoaded', function () {
 
 	let users = []
 
+	// Функция для получения данных с сервера
+	function fetchUsers() {
+		fetch('http://localhost:3000/users')
+			.then(response => response.json())
+			.then(data => {
+				users = data
+				renderUserList()
+			})
+			.catch(error => console.error('Error fetching users:', error))
+	}
+
 	// Функция для отображения пользователей
 	function renderUserList() {
 		userList.innerHTML = ''
@@ -50,10 +61,24 @@ document.addEventListener('DOMContentLoaded', function () {
 			ageError.textContent = ''
 		}
 
-		// Если данные валидны, добавляем пользователя в список
+		// Если данные валидны, добавляем пользователя на сервер
 		if (isValid) {
-			users.push({ name, age })
-			renderUserList()
+			const newUser = { name, age }
+
+			// Отправляем данные на сервер
+			fetch('http://localhost:3000/users', {
+				method: 'POST',
+				headers: {
+					'Content-Type': 'application/json',
+				},
+				body: JSON.stringify(newUser),
+			})
+				.then(response => response.json())
+				.then(() => {
+					fetchUsers() // Обновляем список пользователей после добавления
+				})
+				.catch(error => console.error('Error adding user:', error))
+
 			nameInput.value = ''
 			ageInput.value = ''
 		}
@@ -64,15 +89,32 @@ document.addEventListener('DOMContentLoaded', function () {
 		const user = users[index]
 		nameInput.value = user.name
 		ageInput.value = user.age
-		users.splice(index, 1) // Удаляем пользователя из списка перед редактированием
-		renderUserList()
+
+		// Удаляем пользователя перед редактированием
+		fetch(`http://localhost:3000/users/${user.id}`, {
+			method: 'DELETE',
+		})
+			.then(() => {
+				users.splice(index, 1) // Удаляем из списка
+				renderUserList()
+			})
+			.catch(error => console.error('Error deleting user:', error))
 	}
 
 	// Функция для удаления пользователя
 	window.deleteUser = function (index) {
-		users.splice(index, 1)
-		renderUserList()
+		const user = users[index]
+
+		fetch(`http://localhost:3000/users/${user.id}`, {
+			method: 'DELETE',
+		})
+			.then(() => {
+				users.splice(index, 1) // Удаляем из списка
+				renderUserList()
+			})
+			.catch(error => console.error('Error deleting user:', error))
 	}
 
-	renderUserList()
+	// Загружаем пользователей при загрузке страницы
+	fetchUsers()
 })
